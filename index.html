@@ -7,16 +7,17 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --glow-color: #fbcfe8; /* pink-200 */
             --purple-color: #9333ea; /* purple-600 */
             --dark-purple-color: #6b21a8; /* purple-800 */
+            --border-glow-color: rgba(216, 180, 254, 0.7);
         }
 
         body {
-            font-family: 'Comfortaa', sans-serif;
+            font-family: 'Poppins', sans-serif;
             overflow: hidden;
         }
 
@@ -44,10 +45,8 @@
              color: white;
         }
         
-        /* --- CORRECTED UI: Darker Transparent Purple with Shifting Glowing BORDER --- */
         .ui-wrapper {
             position: relative;
-            /* The glowing border is created by this drop-shadow filter */
             filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.4));
             animation: border-glow-pulse 3s linear infinite;
         }
@@ -59,10 +58,10 @@
         }
 
         .transparent-ui {
-            background-color: rgba(91, 33, 158, 0.35); /* Darker Transparent Purple UI */
+            background-color: rgba(91, 33, 158, 0.35);
             backdrop-filter: blur(16px);
             -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.1); /* Subtle border for definition */
+            border: 1px solid rgba(255, 255, 255, 0.1);
             transition: transform 1s cubic-bezier(0.16, 1, 0.3, 1), opacity 1s cubic-bezier(0.16, 1, 0.3, 1);
         }
         
@@ -97,7 +96,7 @@
             to { background-position: 200% center; }
         }
         
-        /* --- CORRECTED Volume Slider --- */
+        /* --- CORRECTED Volume Slider with Gradient --- */
         #volume-container {
             position: absolute;
             top: 1.25rem;
@@ -149,7 +148,7 @@
             border-radius: 50%; 
             border: 2px solid rgba(0,0,0,0.5); 
             box-shadow: 0 0 8px #fbcfe8;
-            margin-top: -17px; /* This perfectly centers the 20px thumb on the 8px track */
+            margin-top: -17px; /* Corrected margin for vertical centering */
         }
         
         .social-icon-wrapper {
@@ -208,16 +207,15 @@
             pointer-events: none;
         }
 
-        /* --- CORRECTED Currently Playing Animation --- */
         .marquee-container {
             overflow: hidden;
-            border-bottom-left-radius: 1.5rem; /* Match parent's rounded-3xl */
-            border-bottom-right-radius: 1.5rem; /* Match parent's rounded-3xl */
+            border-bottom-left-radius: 1.5rem;
+            border-bottom-right-radius: 1.5rem;
         }
         .disco-text-wrapper {
             display: inline-block;
             white-space: nowrap;
-            padding-left: 100%; /* Start off-screen */
+            padding-left: 100%;
             animation: marquee 30s linear infinite;
         }
         .disco-text-wrapper span {
@@ -276,6 +274,14 @@
             opacity: 1;
             pointer-events: auto;
         }
+        
+        #view-counter-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-top: 1.5rem;
+        }
 
     </style>
 </head>
@@ -313,6 +319,11 @@
                     <blockquote class="my-6 italic text-lg text-pink-100 opacity-90">
                         "I'm the brightest light you'll see in the sky at night during your worst moments..."
                     </blockquote>
+                    
+                    <div id="view-counter-wrapper">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                        <span id="view-counter">Loading...</span>
+                    </div>
 
                     <div class="mt-6 flex items-center justify-center space-x-12">
                         <!-- Discord Icon -->
@@ -367,6 +378,73 @@
         </div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, increment, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        async function setupFirebase() {
+            try {
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                const app = initializeApp(firebaseConfig);
+                const auth = getAuth(app);
+                const db = getFirestore(app);
+                
+                onAuthStateChanged(auth, (user) => {
+                    if (user) {
+                        console.log("Firebase authenticated. User UID:", user.uid);
+                        const viewCounterSpan = document.getElementById('view-counter');
+                        const counterDocRef = doc(db, `artifacts/${appId}/public/data/pageMetrics/views`);
+
+                        onSnapshot(counterDocRef, (doc) => {
+                            if (doc.exists()) {
+                                viewCounterSpan.textContent = `${doc.data().count.toLocaleString()} views`;
+                            } else {
+                                viewCounterSpan.textContent = "0 views";
+                            }
+                        }, (error) => {
+                            console.error("Snapshot listener error:", error);
+                            viewCounterSpan.textContent = 'Error';
+                        });
+
+                        async function incrementViewCount() {
+                            if (!sessionStorage.getItem('viewIncremented')) {
+                                try {
+                                    const docSnap = await getDoc(counterDocRef);
+                                    if (docSnap.exists()) {
+                                        await setDoc(counterDocRef, { count: increment(1) }, { merge: true });
+                                    } else {
+                                        await setDoc(counterDocRef, { count: 1 });
+                                    }
+                                    sessionStorage.setItem('viewIncremented', 'true');
+                                } catch (error) {
+                                    console.error("Error updating view count: ", error);
+                                }
+                            }
+                        }
+                        
+                        const enterScreen = document.getElementById('enter-screen');
+                        enterScreen.addEventListener('click', incrementViewCount, { once: true });
+                    }
+                });
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+            } catch (error) {
+                console.error("Firebase setup failed:", error);
+                const viewCounterSpan = document.getElementById('view-counter');
+                if(viewCounterSpan) viewCounterSpan.textContent = 'Setup Failed';
+            }
+        }
+        setupFirebase();
+    </script>
+    
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const enterScreen = document.getElementById('enter-screen');
@@ -381,7 +459,6 @@
             const disclaimerModal = document.getElementById('disclaimer-modal');
             const closeDisclaimerBtn = document.getElementById('close-disclaimer-btn');
 
-            // --- Tab Title Typewriter ---
             const titleBase = "@Starlight <3";
             let titleIndex = 0;
             let isDeleting = false;
@@ -397,10 +474,9 @@
             }
             typeWriter();
 
-            // --- Bouncing Disco Text ---
             const discoText = "Currently Playing: Justin Bieber - Beauty And A Beat (Slowed + Reverb)";
-            const fullText = discoText + " \u00A0\u00A0\u00A0\u00A0 "; // Add spacing for loop
-            discoWrapper.innerHTML = ''; // Clear previous
+            const fullText = discoText + " \u00A0\u00A0\u00A0\u00A0 ";
+            discoWrapper.innerHTML = '';
             fullText.split('').forEach((char, i) => {
                 const span = document.createElement('span');
                 span.textContent = char === ' ' ? '\u00A0' : char;
@@ -408,7 +484,6 @@
                 discoWrapper.appendChild(span);
             });
 
-            // --- Volume Controls ---
             let isMuted = false;
             let lastVolume = 0.5;
             const volumeIconSVG = `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>`;
@@ -423,7 +498,6 @@
             volumeSlider.value = lastVolume;
             updateVolumeUI(lastVolume);
 
-            // --- Event Listeners ---
             enterScreen.addEventListener('click', () => {
                 enterScreen.style.opacity = '0';
                 setTimeout(() => { enterScreen.style.pointerEvents = 'none'; }, 1200);
