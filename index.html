@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Maddie's Profile</title>
+    <!-- Favicon to prevent 404 error -->
+    <link rel="icon" href="https://github.com/Bapoooossssaaaa/dsdsadsa/blob/main/2909683.png?raw=true">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -381,20 +383,25 @@
     <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, increment, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         async function setupFirebase() {
+            const viewCounterSpan = document.getElementById('view-counter');
             try {
-                  const firebaseConfig = {
-                      apiKey: "AIzaSyCv31ZxkYLOjU82iCVFvSquqPoEcuL4i7I",
-                      authDomain: "maddie-profile-car.firebaseapp.com",
-                      projectId: "maddie-profile-car",
-                      storageBucket: "maddie-profile-car.firebasestorage.app",
-                      messagingSenderId: "419399442487",
-                      appId: "1:419399442487:web:3ffa475dcc4c97b2191fb2",
+                // This is where you paste the config object from your Firebase project.
+                // IMPORTANT: Make sure Anonymous sign-in is enabled in your Firebase project.
+                const firebaseConfig = {
+                    apiKey: "AIzaSyCv31ZxkYLOjU82iCVFvSquqPoEcuL4i7I",
+                    authDomain: "maddie-profile-car.firebaseapp.com",
+                    projectId: "maddie-profile-car",
+                    storageBucket: "maddie-profile-car.appspot.com", // Corrected domain
+                    messagingSenderId: "419399442487",
+                    appId: "1:419399442487:web:3ffa475dcc4c97b2191fb2"
                 };
-                const appId = 'maddies-profile-car';';
+                
+                const appId = 'maddie-profile-car';
+
                 const app = initializeApp(firebaseConfig);
                 const auth = getAuth(app);
                 const db = getFirestore(app);
@@ -402,7 +409,6 @@
                 onAuthStateChanged(auth, (user) => {
                     if (user) {
                         console.log("Firebase authenticated. User UID:", user.uid);
-                        const viewCounterSpan = document.getElementById('view-counter');
                         const counterDocRef = doc(db, `artifacts/${appId}/public/data/pageMetrics/views`);
 
                         onSnapshot(counterDocRef, (doc) => {
@@ -419,12 +425,7 @@
                         async function incrementViewCount() {
                             if (!sessionStorage.getItem('viewIncremented')) {
                                 try {
-                                    const docSnap = await getDoc(counterDocRef);
-                                    if (docSnap.exists()) {
-                                        await setDoc(counterDocRef, { count: increment(1) }, { merge: true });
-                                    } else {
-                                        await setDoc(counterDocRef, { count: 1 });
-                                    }
+                                    await setDoc(counterDocRef, { count: increment(1) }, { merge: true });
                                     sessionStorage.setItem('viewIncremented', 'true');
                                 } catch (error) {
                                     console.error("Error updating view count: ", error);
@@ -437,16 +438,16 @@
                     }
                 });
 
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
+                await signInAnonymously(auth);
 
             } catch (error) {
                 console.error("Firebase setup failed:", error);
-                const viewCounterSpan = document.getElementById('view-counter');
-                if(viewCounterSpan) viewCounterSpan.textContent = 'Setup Failed';
+                if (error.code === 'auth/configuration-not-found') {
+                     console.error("CRITICAL ERROR: Anonymous sign-in is not enabled. Please go to your Firebase Console -> Authentication -> Sign-in method and enable the 'Anonymous' provider.");
+                     viewCounterSpan.textContent = 'Auth Setup Error';
+                } else {
+                     viewCounterSpan.textContent = 'Setup Failed';
+                }
             }
         }
         setupFirebase();
